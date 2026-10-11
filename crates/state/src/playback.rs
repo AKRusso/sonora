@@ -456,10 +456,11 @@ impl Playback {
     ) -> Self {
         cx.subscribe(&session, |this, session, event, cx| match event {
             SessionEvent::SignedIn => {
-                this.set_rate_provider(
-                    session.read(cx).provider_slug() == Some("youtube")
-                        && session.read(cx).authenticated(),
-                );
+                this.set_rate_provider({
+                    let session = session.read(cx);
+                    session.authenticated()
+                        && matches!(session.provider_slug(), Some("youtube" | "spotify"))
+                });
                 let Some(playback) = session.read(cx).playback() else {
                     return;
                 };
@@ -467,10 +468,11 @@ impl Playback {
                 this.adopt(cx);
             }
             SessionEvent::Reconnected => {
-                this.set_rate_provider(
-                    session.read(cx).provider_slug() == Some("youtube")
-                        && session.read(cx).authenticated(),
-                );
+                this.set_rate_provider({
+                    let session = session.read(cx);
+                    session.authenticated()
+                        && matches!(session.provider_slug(), Some("youtube" | "spotify"))
+                });
                 let Some(playback) = session.read(cx).playback() else {
                     return;
                 };
@@ -2057,7 +2059,7 @@ impl Playback {
         self.pitch
     }
 
-    /// Applies YouTube Music speed and pitch controls to the streaming engine.
+    /// Applies speed and pitch controls to the active provider's audio output.
     pub fn set_speed_pitch(&mut self, speed: f32, pitch: f32, cx: &mut Context<Self>) {
         if !self.rate_controls_available {
             return;
