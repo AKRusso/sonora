@@ -209,6 +209,7 @@ pub struct Paced {
     cue: Cue,
     /// Chunks appended and not yet played out or retired.
     live: Arc<AtomicUsize>,
+    queue_limit: usize,
     changed: UnboundedSender<()>,
     checked_at: Instant,
 }
@@ -223,6 +224,7 @@ impl Paced {
             output,
             cue,
             live: Arc::default(),
+            queue_limit: QUEUED_CHUNKS,
             changed,
             checked_at: Instant::now(),
         })
@@ -244,6 +246,12 @@ impl Paced {
         self.output.set_volume(gain);
     }
 
+    /// Limits how far this particular engine may run ahead. Spotify keeps the deeper default
+    /// queue; only an engine that receives rate-control jobs opts into the shorter queue.
+    pub fn set_queue_limit(&mut self, chunks: usize) {
+        self.queue_limit = chunks;
+    }
+
     /// Queues one packet. A packet the cue refuses is dropped, so a decoder that has been
     /// retired makes no sound while it winds down. This never blocks: a caller with nothing
     /// else to do waits through `drain`, one with commands to answer waits through `full`.
@@ -263,7 +271,7 @@ impl Paced {
 
     /// Whether the queue holds all it should, so the next packet can wait.
     pub fn full(&self) -> bool {
-        self.live.load(Ordering::Relaxed) > QUEUED_CHUNKS
+        self.live.load(Ordering::Relaxed) > self.queue_limit
     }
 
     /// Whether everything queued has played out or been retired. A queue on a stream that has
