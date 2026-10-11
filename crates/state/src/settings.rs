@@ -293,6 +293,7 @@ struct Values {
     /// off afterwards is not given it back.
     local_lyrics_offered: bool,
     lyrics_providers: Vec<String>,
+    provider_shortcuts: bool,
     karaoke_lyrics: bool,
     blur_lyrics: bool,
     romanized_lyrics: bool,
@@ -447,6 +448,7 @@ impl Default for Values {
             ]
             .map(str::to_owned)
             .to_vec(),
+            provider_shortcuts: true,
             karaoke_lyrics: true,
             blur_lyrics: true,
             romanized_lyrics: true,
@@ -790,6 +792,10 @@ impl AppSettings {
 
     pub fn lyrics_providers(&self) -> &[String] {
         &self.values.lyrics_providers
+    }
+
+    pub fn provider_shortcuts(&self) -> bool {
+        self.values.provider_shortcuts
     }
 
     pub fn lyrics_provider_enabled(&self, provider: &str) -> bool {
@@ -1194,6 +1200,11 @@ impl AppSettings {
             self.values.lyrics_providers.push(provider.to_owned());
         }
         self.values.lyrics_providers.sort();
+        self.schedule_save(cx);
+    }
+
+    pub fn set_provider_shortcuts(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        self.values.provider_shortcuts = enabled;
         self.schedule_save(cx);
     }
 
